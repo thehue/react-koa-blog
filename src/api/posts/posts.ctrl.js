@@ -77,7 +77,7 @@ export const write = async (ctx) => {
 };
 
 /*
-  GET /api/posts
+  GET /api/posts?username=&tag=&page=
 */
 
 export const list = async (ctx) => {
@@ -90,10 +90,16 @@ export const list = async (ctx) => {
     return;
   }
 
+  const { tag, username } = ctx.query;
+  const query = {
+    ...(username ? { 'user.username': username } : {}),
+    ...(tag ? { tags: { $regex: tag, $options: 'i' } } : {}),
+  };
+
   try {
     //find: 데이터 조회, exec: 서버에 쿼리 요청
     // sort: -1 : 내림차순, 1 : 오름차순
-    const posts = await Post.find()
+    const posts = await Post.find(query)
       .sort({ _id: -1 })
       .limit(10)
       .skip((page - 1) * 10)
@@ -101,7 +107,7 @@ export const list = async (ctx) => {
       .exec();
 
     // 포스트 갯수
-    const postCount = await Post.countDocuments().exec();
+    const postCount = await Post.countDocuments(query).exec();
     // 커스텀 HTTP 헤더 설정
     ctx.set('Last-Page', Math.ceil(postCount / 10));
     // 200자 이상이면 뒤에 ...를 붙이고 문자열을 자르기
